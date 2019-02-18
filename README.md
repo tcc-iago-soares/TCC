@@ -1,2 +1,2 @@
 # TCC
-Conclusoin work of telecommunications engeneering course
+Conclusion work of telecommunications engeneering course
