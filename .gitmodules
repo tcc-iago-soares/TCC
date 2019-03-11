@@ -1,0 +1,3 @@
+[submodule "socket"]
+	path = socket
+	url = https://github.com/Jerenaux/basic-mmo-phaser
