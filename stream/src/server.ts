@@ -1,8 +1,15 @@
 import express, { Application } from "express";
 import socketIO, { Server as SocketIOServer } from "socket.io";
-import { createServer, Server as HTTPServer } from "http";
+import { createServer, Server as HTTPServer } from "https";
 
-const path = require('path'); 
+const path = require('path');
+const fs = require('fs');
+
+const options = {
+key: fs.readFileSync('/home/mineuser/tcc/stream/src/key.pem'),
+cert: fs.readFileSync('/home/mineuser/tcc/stream/src/cert.pem'),
+passphrase: 'tccmonstro'
+};
 
 export class Server {
  private httpServer: HTTPServer;
