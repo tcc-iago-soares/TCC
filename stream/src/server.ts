@@ -1,14 +1,14 @@
 import express, { Application } from "express";
 import socketIO, { Server as SocketIOServer } from "socket.io";
-import { createServer, Server as HTTPServer } from "https";
+import { createServer, Server as HTTPServer } from "http";
 
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 
 const options = {
-key: fs.readFileSync('/home/mineuser/tcc/stream/src/key.pem'),
-cert: fs.readFileSync('/home/mineuser/tcc/stream/src/cert.pem'),
-passphrase: 'tccmonstro'
+  //key: fs.readFileSync('/etc/letsencrypt/live/iago.boidacarapreta.cc/privkey.pem'),
+  //cert: fs.readFileSync('/etc/letsencrypt/live/iago.boidacarapreta.cc/fullchain.pem')  
 };
 
 export class Server {
@@ -27,7 +27,7 @@ export class Server {
  
  private initialize(): void {
    this.app = express();
-   this.httpServer = createServer(this.app);
+   this.httpServer = http.createServer(options,this.app);
    this.io = socketIO(this.httpServer);
 
    this.configureApp();
