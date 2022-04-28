@@ -1,8 +1,0 @@
-{
-  "name": "Sinalization",
-  "version": "1.0.0",
-  "description": "Game's sinalization",
-  "dependencies": {
-    "jssip": "^3.3.5"
-  }
-}
