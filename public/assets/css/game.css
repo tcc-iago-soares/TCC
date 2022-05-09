@@ -5,6 +5,7 @@ ul {
 
 #chatContainer {
     width: calc(100% - 960px);
+    height: 580px;
 }
 
 .flex-container {
@@ -66,12 +67,15 @@ body {
     text-align: center;
 }
 
+.audioArea {
+    height: 60px;
+}
+
 
 /* Messages */
 
 .chatArea {
-    max-height: 580px;
-    height: 580px;
+    height: 500px;
     overflow-y: scroll;
 }
 
