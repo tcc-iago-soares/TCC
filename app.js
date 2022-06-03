@@ -28,7 +28,7 @@ mongoose.set('useFindAndModify', false);
 // create an instance of an express app
 const app = express();
 const server = require('http').Server(app);
-const io = require('socket.io').listen(server);
+const io = require('socket.io')(server);
 
 const players = {};
 
@@ -41,10 +41,26 @@ io.on('connection', function(socket) {
         y: Math.floor(Math.random() * 500) + 50,
         playerId: socket.id
     };
-    // send the players object to the new player
-    socket.emit('currentPlayers', players);
-    // update all other players of the new player
-    socket.broadcast.emit('newPlayer', players[socket.id]);
+
+    socket.on("voice", function(data) {
+
+        var newData = data.split(";");
+        newData[0] = "data:audio/ogg;";
+        newData = newData[0] + newData[1];
+
+        for (const id in socketsStatus) {
+
+            if (id != socketId && !socketsStatus[id].mute && socketsStatus[id].online)
+                socket.broadcast.to(id).emit("send", newData);
+        }
+
+    });
+
+    socket.on("userInformation", function(data) {
+        socketsStatus[socketId] = data;
+
+        io.sockets.emit("usersUpdate", socketsStatus);
+    });
 
     // when a player disconnects, remove them from our players object
     socket.on('disconnect', function() {
@@ -116,20 +132,3 @@ app.use((err, req, res, next) => {
 server.listen(process.env.PORT || 3000, () => {
     console.log(`Server started on port ${process.env.PORT || 3000}`);
 });
-
-function convertListToButtons(roomName, data, isPrimary) {
-    clearConnectList();
-    var otherClientDiv = document.getElementById('otherClients');
-    for (var easyrtcid in data) {
-        var button = document.createElement('button');
-        button.onclick = function(easyrtcid) {
-            return function() {
-                performCall(easyrtcid);
-            };
-        }(easyrtcid);
-
-        var label = document.createTextNode(easyrtc.idToName(easyrtcid));
-        button.appendChild(label);
-        otherClientDiv.appendChild(button);
-    }
-}

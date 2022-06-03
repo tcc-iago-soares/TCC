@@ -15,7 +15,11 @@
         <div id="content"></div>
         <div id="chatContainer">
             <div class="audioArea">
-                <button id="inicia_call">Ligar</button>
+                <button class="control-btn disable-btn" onclick="toggleMicrophone(this)">Open microphone</button>
+                <button class="control-btn disable-btn" onclick="toggleMute(this)">Mute</button>
+                <button class="control-btn disable-btn" onclick="toggleConnection(this)">Go online</button>
+                <h4>Users List</h4>
+                <ul class="users" id="users"></ul>
             </div>
             <div class="chatArea">
                 <ul id="messages" class="messages"></ul>
