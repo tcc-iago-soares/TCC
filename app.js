@@ -42,6 +42,11 @@ io.on('connection', function(socket) {
         playerId: socket.id
     };
 
+    // send the players object to the new player
+    socket.emit('currentPlayers', players);
+    // update all other players of the new player
+    socket.broadcast.emit('newPlayer', players[socket.id]);
+
     socket.on("voice", function(data) {
 
         var newData = data.split(";");
@@ -54,12 +59,6 @@ io.on('connection', function(socket) {
                 socket.broadcast.to(id).emit("send", newData);
         }
 
-    });
-
-    socket.on("userInformation", function(data) {
-        socketsStatus[socketId] = data;
-
-        io.sockets.emit("usersUpdate", socketsStatus);
     });
 
     // when a player disconnects, remove them from our players object

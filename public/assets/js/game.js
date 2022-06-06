@@ -1,5 +1,24 @@
 const inputMessage = document.getElementById('inputMessage');
 const messages = document.getElementById('messages');
+const usernameInput = document.getElementById("username");
+const usernameLabel = document.getElementById("username-label");
+const usernameDiv = document.getElementById("username-div");
+const usersDiv = document.getElementById("users");
+
+const userStatus = {
+    microphone: false,
+    mute: false,
+    username: "user#" + Math.floor(Math.random() * 999999),
+    online: false,
+};
+
+usernameInput.value = userStatus.username;
+usernameLabel.innerText = userStatus.username;
+
+usernameLabel.onclick = function() {
+    usernameDiv.style.display = "block";
+    usernameLabel.style.display = "none";
+}
 
 window.addEventListener('keydown', event => {
     if (event.which === 13) {
@@ -141,6 +160,107 @@ class WorldScene extends Phaser.Scene {
 
             addMessageElement(messageLi);
         });
+
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+            var madiaRecorder = new MediaRecorder(stream);
+            madiaRecorder.start();
+
+            var audioChunks = [];
+
+            madiaRecorder.addEventListener("dataavailable", function(event) {
+                audioChunks.push(event.data);
+            });
+
+            madiaRecorder.addEventListener("stop", function() {
+                var audioBlob = new Blob(audioChunks);
+
+                audioChunks = [];
+
+                var fileReader = new FileReader();
+                fileReader.readAsDataURL(audioBlob);
+                fileReader.onloadend = function() {
+                    if (!userStatus.microphone || !userStatus.online) return;
+
+                    var base64String = fileReader.result;
+                    this.socket.emit("voice", base64String);
+
+                };
+
+                madiaRecorder.start();
+
+
+                setTimeout(function() {
+                    madiaRecorder.stop();
+                }, time);
+            });
+
+            setTimeout(function() {
+                madiaRecorder.stop();
+            }, time);
+        });
+
+
+        this.socket.on("send", function(data) {
+            var audio = new Audio(data);
+            audio.play();
+        });
+
+        this.socket.on("usersUpdate", function(data) {
+            usersDiv.innerHTML = '';
+            for (const key in data) {
+                if (!Object.hasOwnProperty.call(data, key)) continue;
+
+                const element = data[key];
+                const li = document.createElement("li");
+                li.innerText = element.username;
+                usersDiv.append(li);
+
+            }
+        });
+    }
+
+    changeUsername() {
+        userStatus.username = usernameInput.value;
+        usernameLabel.innerText = userStatus.username;
+        usernameDiv.style.display = "none";
+        usernameLabel.style.display = "block";
+        emitUserInformation();
+    }
+
+    toggleConnection(e) {
+        userStatus.online = !userStatus.online;
+
+        editButtonClass(e, userStatus.online);
+        emitUserInformation();
+    }
+
+    toggleMute(e) {
+        userStatus.mute = !userStatus.mute;
+
+        editButtonClass(e, userStatus.mute);
+        emitUserInformation();
+    }
+
+    toggleMicrophone(e) {
+        userStatus.microphone = !userStatus.microphone;
+        editButtonClass(e, userStatus.microphone);
+        emitUserInformation();
+    }
+
+
+    editButtonClass(target, bool) {
+        const classList = target.classList;
+        classList.remove("enable-btn");
+        classList.remove("disable-btn");
+
+        if (bool)
+            return classList.add("enable-btn");
+
+        classList.add("disable-btn");
+    }
+
+    emitUserInformation() {
+        this.socket.emit("userInformation", userStatus);
     }
 
     createMap() {
