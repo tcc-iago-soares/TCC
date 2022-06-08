@@ -1,10 +1,3 @@
-const inputMessage = document.getElementById('inputMessage');
-const messages = document.getElementById('messages');
-const usernameInput = document.getElementById("username");
-const usernameLabel = document.getElementById("username-label");
-const usernameDiv = document.getElementById("username-div");
-const usersDiv = document.getElementById("users");
-
 const userStatus = {
     microphone: false,
     mute: false,
@@ -12,12 +5,135 @@ const userStatus = {
     online: false,
 };
 
+const inputMessage = document.getElementById('inputMessage');
+const messages = document.getElementById('messages');
+
+const usernameInput = document.getElementById("username");
+const usernameLabel = document.getElementById("username-label");
+const usernameDiv = document.getElementById("username-div");
+const usersDiv = document.getElementById("users");
+
 usernameInput.value = userStatus.username;
 usernameLabel.innerText = userStatus.username;
 
 usernameLabel.onclick = function() {
     usernameDiv.style.display = "block";
     usernameLabel.style.display = "none";
+}
+
+window.onload = (e) => {
+    mainFunction();
+};
+
+var socket = io();
+
+function mainFunction(time) {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        var madiaRecorder = new MediaRecorder(stream);
+        madiaRecorder.start();
+
+        var audioChunks = [];
+
+        madiaRecorder.addEventListener("dataavailable", function(event) {
+            audioChunks.push(event.data);
+        });
+
+        madiaRecorder.addEventListener("stop", function() {
+            var audioBlob = new Blob(audioChunks);
+
+            audioChunks = [];
+
+            var fileReader = new FileReader();
+            fileReader.readAsDataURL(audioBlob);
+            fileReader.onloadend = function() {
+                if (!userStatus.microphone || !userStatus.online) return;
+
+                var base64String = fileReader.result;
+                socket.emit("voice", base64String);
+
+            };
+
+            madiaRecorder.start();
+
+
+            setTimeout(function() {
+                madiaRecorder.stop();
+            }, time);
+        });
+
+        setTimeout(function() {
+            madiaRecorder.stop();
+        }, time);
+    });
+
+
+    socket.on("send", function(data) {
+        var audio = new Audio(data);
+        audio.play();
+    });
+
+    socket.on("usersUpdate", function(data) {
+        usersDiv.innerHTML = '';
+        for (const key in data) {
+            if (!Object.hasOwnProperty.call(data, key)) continue;
+
+            const element = data[key];
+            const li = document.createElement("li");
+            li.innerText = element.username;
+            usersDiv.append(li);
+
+        }
+    });
+
+}
+
+usernameLabel.onclick = function() {
+    usernameDiv.style.display = "block";
+    usernameLabel.style.display = "none";
+}
+
+function changeUsername() {
+    userStatus.username = usernameInput.value;
+    usernameLabel.innerText = userStatus.username;
+    usernameDiv.style.display = "none";
+    usernameLabel.style.display = "block";
+    emitUserInformation();
+}
+
+function toggleConnection(e) {
+    userStatus.online = !userStatus.online;
+
+    editButtonClass(e, userStatus.online);
+    emitUserInformation();
+}
+
+function toggleMute(e) {
+    userStatus.mute = !userStatus.mute;
+
+    editButtonClass(e, userStatus.mute);
+    emitUserInformation();
+}
+
+function toggleMicrophone(e) {
+    userStatus.microphone = !userStatus.microphone;
+    editButtonClass(e, userStatus.microphone);
+    emitUserInformation();
+}
+
+
+function editButtonClass(target, bool) {
+    const classList = target.classList;
+    classList.remove("enable-btn");
+    classList.remove("disable-btn");
+
+    if (bool)
+        return classList.add("enable-btn");
+
+    classList.add("disable-btn");
+}
+
+function emitUserInformation() {
+    socket.emit("userInformation", userStatus);
 }
 
 window.addEventListener('keydown', event => {
@@ -95,7 +211,6 @@ class WorldScene extends Phaser.Scene {
     }
 
     create() {
-        this.socket = io();
         this.otherPlayers = this.physics.add.group();
 
         // create map
@@ -111,9 +226,9 @@ class WorldScene extends Phaser.Scene {
         this.createEnemies();
 
         // listen for web socket events
-        this.socket.on('currentPlayers', function(players) {
+        socket.on('currentPlayers', function(players) {
             Object.keys(players).forEach(function(id) {
-                if (players[id].playerId === this.socket.id) {
+                if (players[id].playerId === socket.id) {
                     this.createPlayer(players[id]);
                 } else {
                     this.addOtherPlayers(players[id]);
@@ -121,11 +236,11 @@ class WorldScene extends Phaser.Scene {
             }.bind(this));
         }.bind(this));
 
-        this.socket.on('newPlayer', function(playerInfo) {
+        socket.on('newPlayer', function(playerInfo) {
             this.addOtherPlayers(playerInfo);
         }.bind(this));
 
-        this.socket.on('disconnect', function(playerId) {
+        socket.on('disconnect', function(playerId) {
             this.otherPlayers.getChildren().forEach(function(player) {
                 if (playerId === player.playerId) {
                     player.destroy();
@@ -133,7 +248,7 @@ class WorldScene extends Phaser.Scene {
             }.bind(this));
         }.bind(this));
 
-        this.socket.on('playerMoved', function(playerInfo) {
+        socket.on('playerMoved', function(playerInfo) {
             this.otherPlayers.getChildren().forEach(function(player) {
                 if (playerInfo.playerId === player.playerId) {
                     player.flipX = playerInfo.flipX;
@@ -142,7 +257,7 @@ class WorldScene extends Phaser.Scene {
             }.bind(this));
         }.bind(this));
 
-        this.socket.on('new message', (data) => {
+        socket.on('new message', (data) => {
             const usernameSpan = document.createElement('span');
             const usernameText = document.createTextNode(data.username);
             usernameSpan.className = 'username';
@@ -161,106 +276,6 @@ class WorldScene extends Phaser.Scene {
             addMessageElement(messageLi);
         });
 
-        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-            var madiaRecorder = new MediaRecorder(stream);
-            madiaRecorder.start();
-
-            var audioChunks = [];
-
-            madiaRecorder.addEventListener("dataavailable", function(event) {
-                audioChunks.push(event.data);
-            });
-
-            madiaRecorder.addEventListener("stop", function() {
-                var audioBlob = new Blob(audioChunks);
-
-                audioChunks = [];
-
-                var fileReader = new FileReader();
-                fileReader.readAsDataURL(audioBlob);
-                fileReader.onloadend = function() {
-                    if (!userStatus.microphone || !userStatus.online) return;
-
-                    var base64String = fileReader.result;
-                    this.socket.emit("voice", base64String);
-
-                };
-
-                madiaRecorder.start();
-
-
-                setTimeout(function() {
-                    madiaRecorder.stop();
-                }, time);
-            });
-
-            setTimeout(function() {
-                madiaRecorder.stop();
-            }, time);
-        });
-
-
-        this.socket.on("send", function(data) {
-            var audio = new Audio(data);
-            audio.play();
-        });
-
-        this.socket.on("usersUpdate", function(data) {
-            usersDiv.innerHTML = '';
-            for (const key in data) {
-                if (!Object.hasOwnProperty.call(data, key)) continue;
-
-                const element = data[key];
-                const li = document.createElement("li");
-                li.innerText = element.username;
-                usersDiv.append(li);
-
-            }
-        });
-    }
-
-    changeUsername() {
-        userStatus.username = usernameInput.value;
-        usernameLabel.innerText = userStatus.username;
-        usernameDiv.style.display = "none";
-        usernameLabel.style.display = "block";
-        emitUserInformation();
-    }
-
-    toggleConnection(e) {
-        userStatus.online = !userStatus.online;
-
-        editButtonClass(e, userStatus.online);
-        emitUserInformation();
-    }
-
-    toggleMute(e) {
-        userStatus.mute = !userStatus.mute;
-
-        editButtonClass(e, userStatus.mute);
-        emitUserInformation();
-    }
-
-    toggleMicrophone(e) {
-        userStatus.microphone = !userStatus.microphone;
-        editButtonClass(e, userStatus.microphone);
-        emitUserInformation();
-    }
-
-
-    editButtonClass(target, bool) {
-        const classList = target.classList;
-        classList.remove("enable-btn");
-        classList.remove("disable-btn");
-
-        if (bool)
-            return classList.add("enable-btn");
-
-        classList.add("disable-btn");
-    }
-
-    emitUserInformation() {
-        this.socket.emit("userInformation", userStatus);
     }
 
     createMap() {
@@ -504,7 +519,7 @@ class WorldScene extends Phaser.Scene {
             var y = this.container.y;
             var flipX = this.player.flipX;
             if (this.container.oldPosition && (x !== this.container.oldPosition.x || y !== this.container.oldPosition.y || flipX !== this.container.oldPosition.flipX)) {
-                this.socket.emit('playerMovement', { x, y, flipX });
+                socket.emit('playerMovement', { x, y, flipX });
             }
             // save old position data
             this.container.oldPosition = {

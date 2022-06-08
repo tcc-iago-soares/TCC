@@ -15,6 +15,11 @@
         <div id="content"></div>
         <div id="chatContainer">
             <div class="audioArea">
+                <p id="username-label"></p>
+                <div id="username-div">
+                    <input type="text" id="username">
+                    <button class="username-btn" onclick="changeUsername()">Change username</button>
+                </div>
                 <button class="control-btn disable-btn" onclick="toggleMicrophone(this)">Open microphone</button>
                 <button class="control-btn disable-btn" onclick="toggleMute(this)">Mute</button>
                 <button class="control-btn disable-btn" onclick="toggleConnection(this)">Go online</button>

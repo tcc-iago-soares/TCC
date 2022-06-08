@@ -53,9 +53,9 @@ io.on('connection', function(socket) {
         newData[0] = "data:audio/ogg;";
         newData = newData[0] + newData[1];
 
-        for (const id in socketsStatus) {
+        for (const id in players) {
 
-            if (id != socketId && !socketsStatus[id].mute && socketsStatus[id].online)
+            if (id != players[socket.id] && !players[socket.id].mute && players[socket.id].online)
                 socket.broadcast.to(id).emit("send", newData);
         }
 
@@ -76,6 +76,12 @@ io.on('connection', function(socket) {
         players[socket.id].flipX = movementData.flipX;
         // emit a message to all players about the player that moved
         socket.broadcast.emit('playerMoved', players[socket.id]);
+    });
+
+    socket.on("userInformation", function(data) {
+        players[socket.id] = data;
+
+        socket.emit("usersUpdate", players);
     });
 });
 
