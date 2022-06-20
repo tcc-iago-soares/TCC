@@ -211,6 +211,7 @@ class WorldScene extends Phaser.Scene {
     }
 
     create() {
+        this.socket = socket;
         this.otherPlayers = this.physics.add.group();
 
         // create map
@@ -226,9 +227,9 @@ class WorldScene extends Phaser.Scene {
         this.createEnemies();
 
         // listen for web socket events
-        socket.on('currentPlayers', function(players) {
+        this.socket.on('currentPlayers', function(players) {
             Object.keys(players).forEach(function(id) {
-                if (players[id].playerId === socket.id) {
+                if (players[id].playerId === this.socket.id) {
                     this.createPlayer(players[id]);
                 } else {
                     this.addOtherPlayers(players[id]);
@@ -236,11 +237,11 @@ class WorldScene extends Phaser.Scene {
             }.bind(this));
         }.bind(this));
 
-        socket.on('newPlayer', function(playerInfo) {
+        this.socket.on('newPlayer', function(playerInfo) {
             this.addOtherPlayers(playerInfo);
         }.bind(this));
 
-        socket.on('disconnect', function(playerId) {
+        this.socket.on('disconnect', function(playerId) {
             this.otherPlayers.getChildren().forEach(function(player) {
                 if (playerId === player.playerId) {
                     player.destroy();
@@ -248,7 +249,7 @@ class WorldScene extends Phaser.Scene {
             }.bind(this));
         }.bind(this));
 
-        socket.on('playerMoved', function(playerInfo) {
+        this.socket.on('playerMoved', function(playerInfo) {
             this.otherPlayers.getChildren().forEach(function(player) {
                 if (playerInfo.playerId === player.playerId) {
                     player.flipX = playerInfo.flipX;
@@ -257,7 +258,7 @@ class WorldScene extends Phaser.Scene {
             }.bind(this));
         }.bind(this));
 
-        socket.on('new message', (data) => {
+        this.socket.on('new message', (data) => {
             const usernameSpan = document.createElement('span');
             const usernameText = document.createTextNode(data.username);
             usernameSpan.className = 'username';
